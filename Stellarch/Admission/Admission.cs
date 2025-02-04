@@ -17,7 +17,6 @@ namespace BigSister.Admission
     {
 
         private static List<ulong> newDiscordUsers = new List<ulong>();
-        private static List<ulong> alreadyCheckedUsers = new List<ulong>();
         private static async Task AdmitUser(MessageCreateEventArgs e)
         {
             //check channel
@@ -71,20 +70,14 @@ namespace BigSister.Admission
             var user = e.Member;
             var newColonistRole = e.Guild.GetRole(934494665539993611);
             var oldColonistRole = e.Guild.GetRole(1291125653999058955);
-            var levelRole = e.Guild.GetRole(793924952465735700);
 
-            if (user.Roles.Contains(levelRole) && !user.Roles.Contains(newColonistRole)) // If user has been given the Level 10 role and doesn't already have colonist, run the following.
+            if(user.Roles.Contains(oldColonistRole))
+            {
+                await user.RevokeRoleAsync(oldColonistRole);
+            }
+            if (!user.Roles.Contains(newColonistRole))
             {
                 await user.GrantRoleAsync(newColonistRole);
-                if(user.Roles.Contains(oldColonistRole))
-                {
-                    await user.RevokeRoleAsync(oldColonistRole);
-                }
-                alreadyCheckedUsers.Add(user.Id); // We don't want them to be checked again as that needs more requests to be sent (though the roles should really be cached)
-            }
-            else if (user.Roles.Contains(newColonistRole))
-            {
-                alreadyCheckedUsers.Add(user.Id);
             }
         }
 
@@ -99,9 +92,12 @@ namespace BigSister.Admission
 
         internal static async Task BotClient_GuildMemberUpdated(DiscordClient botClient, GuildMemberUpdateEventArgs e)
         {
-            if(e.RolesAfter.Count - e.RolesBefore.Count > 0)
+            if (e.RolesAfter.Count - e.RolesBefore.Count != 0)
             {
-                if(!alreadyCheckedUsers.Contains(e.Member.Id)) // If the user already given the normal colonist role (on this bot session), don't check again.
+                List<ulong> roleList = e.RolesAfter.Select(x => x.Id).ToList();
+                ulong oldColonistRoleID = 1291125653999058955;
+                ulong levelRoleID = 793924952465735700;
+                if (roleList.Contains(levelRoleID) && roleList.Contains(oldColonistRoleID)) // If the user already given the normal colonist role, don't check again.
                 {
                     await AdmitActiveUser(e);
                 }
